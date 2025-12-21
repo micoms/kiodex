@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.home
 
 import eu.kanade.tachiyomi.data.jikan.JikanApi
 import eu.kanade.tachiyomi.data.jikan.JikanManga
+import eu.kanade.tachiyomi.data.recommendation.MangaRecommendationEngine
 import eu.kanade.tachiyomi.ui.base.presenter.BaseCoroutinePresenter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,11 +10,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Presenter for Home screen - loads manga from Jikan API
+ * Presenter for Home screen - loads manga from Jikan API and personalized recommendations
  */
 class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     
     private val jikanApi = JikanApi()
+    private val recommendationEngine = MangaRecommendationEngine()
+    
+    // "For You" - Personalized recommendations based on user's library
+    private val _forYouManga = MutableStateFlow<List<JikanManga>>(emptyList())
+    val forYouManga: StateFlow<List<JikanManga>> = _forYouManga.asStateFlow()
     
     private val _topManga = MutableStateFlow<List<JikanManga>>(emptyList())
     val topManga: StateFlow<List<JikanManga>> = _topManga.asStateFlow()
@@ -44,7 +50,18 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
             _error.value = null
             
             try {
-                // Load all sections in parallel
+                // Load personalized "For You" recommendations first
+                try {
+                    val personalizedRecs = recommendationEngine.getPersonalizedRecommendations(limit = 15)
+                    _forYouManga.value = personalizedRecs
+                } catch (e: Exception) {
+                    // If personalized fails, leave it empty - the section will be hidden
+                    _forYouManga.value = emptyList()
+                }
+                
+                kotlinx.coroutines.delay(350)
+                
+                // Load all other sections
                 val topResponse = jikanApi.getTopManga(limit = 15)
                 _topManga.value = topResponse.data
                 
@@ -81,6 +98,7 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
                 _popularManga.value = emptyList()
                 _publishingManga.value = emptyList()
                 _recommendedManga.value = emptyList()
+                _forYouManga.value = emptyList()
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {

@@ -145,6 +145,8 @@
     <string name="search_results">Search results</string>
     <string name="pref_home_content">Home content</string>
     <string name="recommended">Recommended</string>
+    <string name="for_you">For You</string>
+    <string name="based_on_library">Based on your library</string>
 
     <!-- Library -->
     <string name="library">Library</string>

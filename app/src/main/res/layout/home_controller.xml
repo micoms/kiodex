@@ -40,12 +40,48 @@
                 android:orientation="vertical"
                 android:padding="8dp">
 
+                <!-- For You Section (Personalized AI Recommendations) -->
+                <LinearLayout
+                    android:id="@+id/for_you_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/for_you_header"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/for_you"
+                        android:textAppearance="?attr/textAppearanceTitleLarge"
+                        android:textStyle="bold"
+                        android:paddingTop="12dp" />
+
+                    <TextView
+                        android:id="@+id/for_you_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/based_on_library"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:alpha="0.7"
+                        android:paddingBottom="8dp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/for_you_recycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never" />
+                </LinearLayout>
+
                 <!-- Top Manga Section -->
                 <LinearLayout
                     android:id="@+id/top_manga_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:layout_marginTop="16dp"
                     android:visibility="gone"
                     tools:visibility="visible">
 
