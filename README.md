@@ -1,6 +1,7 @@
 <div align="center">
-
-<img src="./.github/readme-images/app-icon.webp" alt="KioDex logo" height="200px" width="200px" />
+<a href="https://github.com/micoms/kiodex">
+    <img src="./.github/readme-images/app-icon.png" alt="KioDex logo" height="200px" width="200px" />
+</a>
 
 # KioDex
 
