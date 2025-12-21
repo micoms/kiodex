@@ -30,7 +30,6 @@ import yokai.util.lang.getString
 
 /**
  * Controller for Home screen - displays manga from Jikan (MyAnimeList) API
- * Includes personalized "For You" recommendations based on user's library
  */
 class HomeController(bundle: Bundle? = null) :
     BaseCoroutineController<HomeControllerBinding, HomePresenter>(bundle),
@@ -39,7 +38,6 @@ class HomeController(bundle: Bundle? = null) :
 
     override var presenter = HomePresenter()
     
-    private var forYouAdapter: HomeMangaAdapter? = null
     private var topMangaAdapter: HomeMangaAdapter? = null
     private var popularMangaAdapter: HomeMangaAdapter? = null
     private var publishingMangaAdapter: HomeMangaAdapter? = null
@@ -75,11 +73,6 @@ class HomeController(bundle: Bundle? = null) :
             },
         )
 
-        // Setup For You section (personalized recommendations)
-        forYouAdapter = HomeMangaAdapter { manga -> onMangaClick(manga) }
-        binding.forYouRecycler.adapter = forYouAdapter
-        binding.forYouRecycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
-
         // Setup top manga section (default horizontal)
         topMangaAdapter = HomeMangaAdapter { manga -> onMangaClick(manga) }
         binding.topMangaRecycler.adapter = topMangaAdapter
@@ -101,13 +94,6 @@ class HomeController(bundle: Bundle? = null) :
         binding.recommendationsRecycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
 
         // Observe presenter state
-        
-        // For You (personalized recommendations)
-        presenter.forYouManga.onEach { manga ->
-            forYouAdapter?.submitList(manga)
-            binding.forYouSection.isVisible = manga.isNotEmpty()
-        }.launchIn(viewScope)
-        
         presenter.topManga.onEach { manga ->
             topMangaAdapter?.submitList(manga)
             binding.topMangaSection.isVisible = manga.isNotEmpty()
@@ -152,8 +138,6 @@ class HomeController(bundle: Bundle? = null) :
                 binding.topMangaRecycler.layoutManager = GridLayoutManager(view?.context, 3)
                 presenter.searchManga(query)
                 binding.topMangaHeader.text = view?.context?.getString(MR.strings.search_results)
-                // Hide For You during search
-                binding.forYouSection.isVisible = false
             } else {
                 // Switch back to Horizontal for Home
                 binding.topMangaRecycler.layoutManager = LinearLayoutManager(view?.context, LinearLayoutManager.HORIZONTAL, false)
@@ -177,7 +161,6 @@ class HomeController(bundle: Bundle? = null) :
 
     override fun onDestroyView(view: View) {
         super.onDestroyView(view)
-        forYouAdapter = null
         topMangaAdapter = null
         popularMangaAdapter = null
         publishingMangaAdapter = null

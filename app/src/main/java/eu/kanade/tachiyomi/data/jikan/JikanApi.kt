@@ -71,27 +71,6 @@ class JikanApi {
         return fetchList(url).filterTypes()
     }
 
-    /**
-     * Search manga by genre IDs
-     * Genre IDs can be found at: https://api.jikan.moe/v4/genres/manga
-     * 
-     * @param genreIds List of genre IDs to search for (uses AND logic)
-     * @param page Page number for pagination
-     * @param limit Number of results per page
-     */
-    suspend fun getMangaByGenres(
-        genreIds: List<Int>,
-        page: Int = 1,
-        limit: Int = 25
-    ): JikanResponse<List<JikanManga>> {
-        if (genreIds.isEmpty()) {
-            return JikanResponse(data = emptyList(), pagination = null)
-        }
-        val genresParam = genreIds.joinToString(",")
-        val url = "$BASE_URL/manga?genres=$genresParam&order_by=score&sort=desc&page=$page&limit=$limit"
-        return fetchList(url).filterTypes()
-    }
-
     private fun JikanResponse<List<JikanManga>>.filterTypes(): JikanResponse<List<JikanManga>> {
         val allowedTypes = uiPreferences.homeContent().get()
         val filtered = data.filter { checkType(it.type, allowedTypes) }

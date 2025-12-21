@@ -2,27 +2,18 @@ package eu.kanade.tachiyomi.ui.home
 
 import eu.kanade.tachiyomi.data.jikan.JikanApi
 import eu.kanade.tachiyomi.data.jikan.JikanManga
-import eu.kanade.tachiyomi.data.recommendation.RecommendationEngine
 import eu.kanade.tachiyomi.ui.base.presenter.BaseCoroutinePresenter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 
 /**
  * Presenter for Home screen - loads manga from Jikan API
- * Includes personalized "For You" recommendations based on user's library
  */
 class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     
     private val jikanApi = JikanApi()
-    private val recommendationEngine = RecommendationEngine()
-    
-    // Personalized recommendations based on library
-    private val _forYouManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val forYouManga: StateFlow<List<JikanManga>> = _forYouManga.asStateFlow()
     
     private val _topManga = MutableStateFlow<List<JikanManga>>(emptyList())
     val topManga: StateFlow<List<JikanManga>> = _topManga.asStateFlow()
@@ -41,10 +32,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-    
-    // Whether user has enough library data for personalized recommendations
-    private val _hasPersonalizedData = MutableStateFlow(false)
-    val hasPersonalizedData: StateFlow<Boolean> = _hasPersonalizedData.asStateFlow()
 
     override fun onCreate() {
         super.onCreate()
@@ -57,9 +44,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
             _error.value = null
             
             try {
-                // First, try to load personalized recommendations
-                loadPersonalizedRecommendations()
-                
                 // Load all sections in parallel
                 val topResponse = jikanApi.getTopManga(limit = 15)
                 _topManga.value = topResponse.data
@@ -87,28 +71,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
             }
         }
     }
-    
-    /**
-     * Load personalized recommendations based on user's library.
-     * Falls back gracefully if library is empty or insufficient.
-     */
-    private suspend fun loadPersonalizedRecommendations() {
-        try {
-            val hasData = recommendationEngine.hasEnoughData()
-            _hasPersonalizedData.value = hasData
-            
-            if (hasData) {
-                val recommendations = recommendationEngine.getPersonalizedRecommendations(limit = 15)
-                _forYouManga.value = recommendations
-            } else {
-                _forYouManga.value = emptyList()
-            }
-        } catch (e: Exception) {
-            // Silently fail - personalized recommendations are optional
-            _forYouManga.value = emptyList()
-            _hasPersonalizedData.value = false
-        }
-    }
 
     fun searchManga(query: String) {
         presenterScope.launch {
@@ -119,7 +81,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
                 _popularManga.value = emptyList()
                 _publishingManga.value = emptyList()
                 _recommendedManga.value = emptyList()
-                _forYouManga.value = emptyList()
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
@@ -129,8 +90,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     }
 
     fun refresh() {
-        // Clear recommendation cache on manual refresh
-        recommendationEngine.clearCache()
         loadHomeData()
     }
 }
