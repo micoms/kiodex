@@ -10,7 +10,13 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.11.0]
+
 ### Additions
+- Add personalized "For You" recommendations on the Home page based on your library
+  - Analyzes genres from manga in your library
+  - Suggests similar manga you haven't added yet
+  - Shows "Based on your library" subtitle for clarity
 - Add random library sort
 - Add the ability to save search queries
 - Add toggle to enable/disable hide source on swipe (@Hiirbaf)
@@ -18,6 +24,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Add option to zoom into full covers (@Hiirbaf)
 
 ### Changes
+- Rebranded app to KioDex
 - Temporarily disable log file
 - Categories' header now show filtered count when you search the library when you have "Show number of items" enabled (@LeeSF03)
 - Chapter progress now saved everything the page is changed
@@ -97,6 +104,7 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 - Update activity to v1.11.0
 - Update lifecycle to v2.9.4
 - Update sqldelight to v2.2.1
+
 
 ## [1.9.7.3]
 
