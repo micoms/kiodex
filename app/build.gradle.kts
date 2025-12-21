@@ -90,6 +90,7 @@ android {
             applicationIdSuffix = ""
             isShrinkResources = true
             isMinifyEnabled = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
         }
         create("beta") {
