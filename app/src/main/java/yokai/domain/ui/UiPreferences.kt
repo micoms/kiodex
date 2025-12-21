@@ -13,4 +13,6 @@ class UiPreferences(private val preferenceStore: PreferenceStore) {
     fun enableChapterSwipeAction() = preferenceStore.getBoolean("enable_chapter_swipe_action", true)
 
     fun enableSourceSwipeAction() = preferenceStore.getBoolean("enable_source_swipe_action", true)
+
+    fun homeContent() = preferenceStore.getStringSet(PreferenceKeys.homeContent, setOf("Manhwa"))
 }

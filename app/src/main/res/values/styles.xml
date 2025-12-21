@@ -283,26 +283,36 @@
     </style>
 
     <style name="Widget.Tachiyomi.BottomNavigationView" parent="Widget.Material3.BottomNavigationView">
-        <item name="itemPaddingBottom">10dp</item>
-        <item name="itemPaddingTop">10dp</item>
-        <item name="android:minHeight">68dp</item>
+        <item name="itemPaddingBottom">12dp</item>
+        <item name="itemPaddingTop">12dp</item>
+        <item name="android:minHeight">80dp</item>
         <item name="itemIconTint">@color/bottom_nav_item_selector</item>
         <item name="itemRippleColor">@color/ripple_nav</item>
         <item name="itemTextColor">@color/bottom_nav_text_selector</item>
-        <item name="labelVisibilityMode">labeled</item>
-        <item name="android:background">?colorPrimaryVariant</item>
+        <item name="labelVisibilityMode">selected</item>
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="elevation">8dp</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.Tachiyomi.BottomNavIndicator</item>
         <item name="tabBarIconColor">?tabBarIconColor</item>
         <item name="tabRippleColor">?colorControlHighlight</item>
     </style>
 
+    <style name="Widget.Tachiyomi.BottomNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">?attr/colorSecondaryContainer</item>
+        <item name="android:width">64dp</item>
+        <item name="android:height">32dp</item>
+    </style>
+
 
     <style name="Widget.Tachiyomi.NavigationRail" parent="Widget.Material3.NavigationRailView">
-        <item name="android:minHeight">68dp</item>
+        <item name="android:minHeight">80dp</item>
         <item name="itemIconTint">@color/bottom_nav_item_selector</item>
         <item name="itemRippleColor">@color/ripple_nav</item>
         <item name="itemTextColor">@color/bottom_nav_text_selector</item>
-        <item name="labelVisibilityMode">labeled</item>
-        <item name="android:background">?colorPrimaryVariant</item>
+        <item name="labelVisibilityMode">selected</item>
+        <item name="android:background">?attr/colorSurface</item>
+        <item name="elevation">8dp</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.Tachiyomi.BottomNavIndicator</item>
         <item name="tabBarIconColor">?tabBarIconColor</item>
         <item name="tabRippleColor">?colorControlHighlight</item>
     </style>

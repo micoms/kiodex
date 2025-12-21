@@ -85,6 +85,7 @@ import eu.kanade.tachiyomi.ui.base.SmallToolbarInterface
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.base.controller.BaseLegacyController
 import eu.kanade.tachiyomi.ui.base.controller.DialogController
+import eu.kanade.tachiyomi.ui.home.HomeController
 import eu.kanade.tachiyomi.ui.library.LibraryController
 import eu.kanade.tachiyomi.ui.library.compose.LibraryComposeController
 import eu.kanade.tachiyomi.ui.manga.MangaDetailsController
@@ -539,6 +540,7 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             if (currentRoot?.tag()?.toIntOrNull() != id) {
                 setRoot(
                     when (id) {
+                        R.id.nav_home -> HomeController()
                         R.id.nav_library -> if (basePreferences.composeLibrary().get()) LibraryComposeController() else LibraryController()
                         R.id.nav_recents -> RecentsController()
                         else -> BrowseController()
@@ -1221,7 +1223,8 @@ open class MainActivity : BaseActivity<MainActivityBinding>() {
             0, -1 -> R.id.nav_library
             1, -2 -> R.id.nav_recents
             -3 -> R.id.nav_browse
-            else -> R.id.nav_library
+            -4 -> R.id.nav_home
+            else -> R.id.nav_home  // Default to Home
         }
     }
 

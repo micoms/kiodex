@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.ui.setting.onChange
 import eu.kanade.tachiyomi.ui.setting.onClick
 import eu.kanade.tachiyomi.ui.setting.preference
 import eu.kanade.tachiyomi.ui.setting.preferenceCategory
+import eu.kanade.tachiyomi.ui.setting.multiSelectListPreferenceMat
 import eu.kanade.tachiyomi.ui.setting.summaryMRes as summaryRes
 import eu.kanade.tachiyomi.ui.setting.switchPreference
 import eu.kanade.tachiyomi.ui.setting.titleMRes as titleRes
@@ -54,6 +55,7 @@ class SettingsGeneralController : SettingsLegacyController() {
                 -1 -> MR.strings.library
                 -2 -> MR.strings.recents
                 -3 -> MR.strings.browse
+                -4 -> MR.strings.home
                 else -> MR.strings.last_used_library_recents
             }
             entriesRes = arrayOf(
@@ -61,11 +63,12 @@ class SettingsGeneralController : SettingsLegacyController() {
                 MR.strings.library,
                 MR.strings.recents,
                 MR.strings.browse,
+                MR.strings.home,
             )
-            entryValues = (0 downTo -3).toList()
-            defaultValue = 0
+            entryValues = (0 downTo -4).toList()
+            defaultValue = -4
             customSelectedValue = when (val value = preferences.startingTab().get()) {
-                in -3..-1 -> value
+                in -4..-1 -> value
                 else -> 0
             }
 
@@ -75,13 +78,40 @@ class SettingsGeneralController : SettingsLegacyController() {
                     -1 -> MR.strings.library
                     -2 -> MR.strings.recents
                     -3 -> MR.strings.browse
+                    -4 -> MR.strings.home
                     else -> MR.strings.last_used_library_recents
                 }
                 customSelectedValue = when (newValue) {
-                    in -3..-1 -> newValue as Int
+                    in -4..-1 -> newValue as Int
                     else -> 0
                 }
                 true
+            }
+        }
+
+        preferenceCategory {
+            titleRes = MR.strings.home
+
+            multiSelectListPreferenceMat(activity) {
+                key = Keys.homeContent
+                titleRes = MR.strings.pref_home_content
+                entriesRes = arrayOf(
+                    MR.strings.manga,
+                    MR.strings.manhwa,
+                    MR.strings.manhua,
+                    MR.strings.novel,
+                    MR.strings.one_shot,
+                    MR.strings.doujinshi,
+                )
+                entryValues = listOf(
+                    "Manga",
+                    "Manhwa",
+                    "Manhua",
+                    "Novel",
+                    "One-shot",
+                    "Doujinshi",
+                )
+                defaultValue = setOf("Manhwa")
             }
         }
 
