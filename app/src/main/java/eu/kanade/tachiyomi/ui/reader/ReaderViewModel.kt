@@ -66,6 +66,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -156,6 +158,26 @@ class ReaderViewModel(
      */
     private var finished = false
     private var chapterToDownload: Download? = null
+    
+    /**
+     * Job for debouncing chapter progress saves to reduce DB writes during rapid page changes.
+     * Cancelled and replaced on each page change, only writes to DB after debounce period.
+     */
+    private var saveProgressJob: Job? = null
+    
+    /**
+     * Stores pending chapter progress for debounced save.
+     * Updated immediately on page change for instant UI feedback.
+     */
+    private var pendingProgressSave: ChapterProgressData? = null
+    
+    private data class ChapterProgressData(
+        val chapterId: Long,
+        val lastPageRead: Int,
+        val pagesLeft: Int,
+        val read: Boolean,
+        val bookmark: Boolean,
+    )
 
     private val unfilteredChapterList by lazy {
         val manga = manga!!
@@ -187,11 +209,18 @@ class ReaderViewModel(
 
     /**
      * Called when the user pressed the back button and is going to leave the reader. Used to
-     * trigger deletion of the downloaded chapters.
+     * trigger deletion of the downloaded chapters and force save of any pending progress.
      */
     fun onBackPressed() {
         if (finished) return
         finished = true
+        
+        // Force save any pending chapter progress before leaving
+        saveProgressJob?.cancel()
+        viewModelScope.launchNonCancellableIO {
+            flushPendingProgressSave()
+        }
+        
         deletePendingChapters()
         val currentChapters = state.value.viewerChapters
         if (currentChapters != null) {
@@ -505,10 +534,8 @@ class ReaderViewModel(
 
         val selectedChapter = page.chapter
 
-        // Save last page read and mark as read if needed
-        viewModelScope.launchNonCancellableIO {
-            saveChapterProgress(selectedChapter, page, hasExtraPage)
-        }
+        // Save last page read with debouncing for better performance
+        saveChapterProgressDebounced(selectedChapter, page, hasExtraPage)
 
         if (selectedChapter != currentChapters.currChapter) {
             Logger.d { "Setting ${selectedChapter.chapter.url} as active" }
@@ -519,6 +546,84 @@ class ReaderViewModel(
         val inDownloadRange = page.number.toDouble() / pages.size > 0.2
         if (inDownloadRange) {
             downloadNextChapters()
+        }
+    }
+    
+    /**
+     * Debounced chapter progress saving for improved performance.
+     * Updates in-memory state immediately for instant UI feedback,
+     * then delays DB write to coalesce rapid page changes.
+     */
+    private fun saveChapterProgressDebounced(readerChapter: ReaderChapter, page: ReaderPage, hasExtraPage: Boolean) {
+        val shouldTrack = !preferences.incognitoMode().get() || hasTrackers
+        if (!shouldTrack || page.status is Page.State.Error) return
+        
+        // Update in-memory state immediately for instant UI feedback
+        readerChapter.chapter.last_page_read = page.index
+        readerChapter.chapter.pages_left = (readerChapter.pages?.size ?: page.index) - page.index
+        readerChapter.requestedPage = page.index
+        
+        // Check if chapter is complete
+        val isComplete = (readerChapter.pages?.lastIndex == page.index && page.firstHalf != true) ||
+            (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
+        
+        if (isComplete) {
+            readerChapter.chapter.read = true
+        }
+        
+        // Store pending progress for debounced write
+        pendingProgressSave = ChapterProgressData(
+            chapterId = readerChapter.chapter.id!!,
+            lastPageRead = readerChapter.chapter.last_page_read,
+            pagesLeft = readerChapter.chapter.pages_left,
+            read = readerChapter.chapter.read,
+            bookmark = readerChapter.chapter.bookmark,
+        )
+        
+        // Cancel previous pending DB write
+        saveProgressJob?.cancel()
+        
+        // Schedule debounced DB write (1 second delay)
+        saveProgressJob = viewModelScope.launch {
+            delay(1000L)
+            flushPendingProgressSave()
+            
+            // Handle chapter completion after save
+            if (isComplete) {
+                updateTrackChapterAfterReading(readerChapter)
+                deleteChapterIfNeeded(readerChapter)
+                handleDuplicateChapters(readerChapter)
+            }
+        }
+    }
+    
+    /**
+     * Immediately flushes any pending chapter progress to the database.
+     * Called on debounce timeout and when leaving the reader.
+     */
+    private suspend fun flushPendingProgressSave() {
+        val data = pendingProgressSave ?: return
+        pendingProgressSave = null
+        
+        updateChapter.await(
+            ChapterUpdate(
+                id = data.chapterId,
+                read = data.read,
+                bookmark = data.bookmark,
+                lastPageRead = data.lastPageRead.toLong(),
+                pagesLeft = data.pagesLeft.toLong(),
+            )
+        )
+    }
+    
+    /**
+     * Force saves any pending progress immediately.
+     * Should be called when leaving the reader to ensure progress is persisted.
+     */
+    fun forceSavePendingProgress() {
+        saveProgressJob?.cancel()
+        viewModelScope.launchNonCancellableIO {
+            flushPendingProgressSave()
         }
     }
 
@@ -640,7 +745,13 @@ class ReaderViewModel(
         readerChapter.chapter.read = true
         updateTrackChapterAfterReading(readerChapter)
         deleteChapterIfNeeded(readerChapter)
-
+        handleDuplicateChapters(readerChapter)
+    }
+    
+    /**
+     * Handles marking duplicate chapters as read when a chapter is completed.
+     */
+    private suspend fun handleDuplicateChapters(readerChapter: ReaderChapter) {
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead().get()
             .contains(LibraryPreferences.MARK_DUPLICATE_READ_CHAPTER_READ_EXISTING)
         if (!markDuplicateAsRead) return
