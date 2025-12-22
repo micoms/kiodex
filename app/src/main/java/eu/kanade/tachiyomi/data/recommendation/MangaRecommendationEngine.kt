@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.data.recommendation
 
 import eu.kanade.tachiyomi.data.database.models.LibraryManga
-import eu.kanade.tachiyomi.data.jikan.JikanApi
-import eu.kanade.tachiyomi.data.jikan.JikanManga
+import eu.kanade.tachiyomi.data.anilist.AnilistApi
+import eu.kanade.tachiyomi.data.anilist.AnilistManga
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.manga.interactor.GetLibraryManga
 
@@ -12,22 +12,22 @@ import yokai.domain.manga.interactor.GetLibraryManga
  * Algorithm:
  * 1. Extract genres from user's library manga
  * 2. Weight genres by recency (recently read manga contribute more)
- * 3. Query Jikan API with top genres
+ * 3. Query AniList API with top genres
  * 4. Filter out manga already in library
  * 5. Return personalized recommendations
  */
 class MangaRecommendationEngine {
     
-    private val jikanApi = JikanApi()
+    private val anilistApi = AnilistApi()
     private val getLibraryManga: GetLibraryManga by injectLazy()
     
     /**
      * Get personalized manga recommendations based on user's library
      * 
      * @param limit Maximum number of recommendations to return
-     * @return List of recommended JikanManga
+     * @return List of recommended AnilistManga
      */
-    suspend fun getPersonalizedRecommendations(limit: Int = 15): List<JikanManga> {
+    suspend fun getPersonalizedRecommendations(limit: Int = 15): List<AnilistManga> {
         val libraryManga = getLibraryManga.await()
         
         // If library is empty, return empty list (caller should fallback to general recommendations)
@@ -46,15 +46,12 @@ class MangaRecommendationEngine {
         }
         
         // Search for manga with similar genres
-        val recommendations = mutableListOf<JikanManga>()
+        val recommendations = mutableListOf<AnilistManga>()
         
         for (genre in topGenres.take(3)) {
             try {
-                val genreResults = jikanApi.searchManga(genre, limit = 25)
-                recommendations.addAll(genreResults.data)
-                
-                // Rate limiting - small delay between requests
-                kotlinx.coroutines.delay(350)
+                val genreResults = anilistApi.searchManga(genre, limit = 25)
+                recommendations.addAll(genreResults)
             } catch (e: Exception) {
                 // Continue with other genres if one fails
                 continue
@@ -63,17 +60,17 @@ class MangaRecommendationEngine {
         
         // Filter and deduplicate
         return recommendations
-            .distinctBy { it.malId }
+            .distinctBy { it.id }
             .filter { manga ->
                 // Exclude manga already in library (fuzzy title match)
-                val mangaTitle = manga.title.lowercase()
+                val mangaTitle = manga.title.userTitle().lowercase()
                 !libraryTitles.any { libraryTitle ->
                     mangaTitle == libraryTitle || 
                     mangaTitle.contains(libraryTitle) || 
                     libraryTitle.contains(mangaTitle)
                 }
             }
-            .sortedByDescending { it.score ?: 0.0 }
+            .sortedByDescending { it.averageScore ?: 0 }
             .take(limit)
     }
     
@@ -106,6 +103,7 @@ class MangaRecommendationEngine {
 
         
         // Return top genres sorted by count
+        // Note: AniList genres are specific (Action, Adventure, etc.) - simple string matching usually works
         return genreCount.entries
             .sortedByDescending { it.value }
             .take(5)

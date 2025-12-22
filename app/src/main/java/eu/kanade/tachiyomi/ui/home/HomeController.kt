@@ -11,25 +11,23 @@ import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.jikan.JikanManga
+import eu.kanade.tachiyomi.data.anilist.AnilistManga
 import eu.kanade.tachiyomi.databinding.HomeControllerBinding
 import eu.kanade.tachiyomi.ui.base.controller.BaseCoroutineController
 import eu.kanade.tachiyomi.ui.main.FloatingSearchInterface
 import eu.kanade.tachiyomi.ui.main.RootSearchInterface
-import eu.kanade.tachiyomi.ui.setting.controllers.SettingsMainController
 import eu.kanade.tachiyomi.util.system.ignoredSystemInsets
 import eu.kanade.tachiyomi.util.view.activityBinding
 import eu.kanade.tachiyomi.util.view.scrollViewWith
 import eu.kanade.tachiyomi.util.view.setOnQueryTextChangeListener
 import eu.kanade.tachiyomi.util.view.setStyle
-import eu.kanade.tachiyomi.util.view.withFadeTransaction
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import yokai.i18n.MR
 import yokai.util.lang.getString
 
 /**
- * Controller for Home screen - displays manga from Jikan (MyAnimeList) API
+ * Controller for Home screen - displays manga from AniList API
  * with personalized "For You" recommendations based on user's library
  */
 class HomeController(bundle: Bundle? = null) :
@@ -169,14 +167,14 @@ class HomeController(bundle: Bundle? = null) :
         return super.onOptionsItemSelected(item)
     }
 
-    private fun onMangaClick(manga: JikanManga) {
+    private fun onMangaClick(manga: AnilistManga) {
         // Show source picker dialog
         val dialog = SourcePickerDialog(manga)
         dialog.showDialog(router)
     }
 
     override fun onDestroyView(view: View) {
-        super.onDestroyView(view)
+        super.onViewCreated(view)
         forYouAdapter = null
         topMangaAdapter = null
         popularMangaAdapter = null

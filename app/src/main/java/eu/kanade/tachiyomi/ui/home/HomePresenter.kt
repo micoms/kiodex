@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.ui.home
 
-import eu.kanade.tachiyomi.data.jikan.JikanApi
-import eu.kanade.tachiyomi.data.jikan.JikanManga
+import eu.kanade.tachiyomi.data.anilist.AnilistApi
+import eu.kanade.tachiyomi.data.anilist.AnilistManga
 import eu.kanade.tachiyomi.data.recommendation.MangaRecommendationEngine
 import eu.kanade.tachiyomi.ui.base.presenter.BaseCoroutinePresenter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,28 +10,28 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Presenter for Home screen - loads manga from Jikan API and personalized recommendations
+ * Presenter for Home screen - loads manga from AniList API and personalized recommendations
  */
 class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     
-    private val jikanApi = JikanApi()
+    private val anilistApi = AnilistApi()
     private val recommendationEngine = MangaRecommendationEngine()
     
     // "For You" - Personalized recommendations based on user's library
-    private val _forYouManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val forYouManga: StateFlow<List<JikanManga>> = _forYouManga.asStateFlow()
+    private val _forYouManga = MutableStateFlow<List<AnilistManga>>(emptyList())
+    val forYouManga: StateFlow<List<AnilistManga>> = _forYouManga.asStateFlow()
     
-    private val _topManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val topManga: StateFlow<List<JikanManga>> = _topManga.asStateFlow()
+    private val _topManga = MutableStateFlow<List<AnilistManga>>(emptyList())
+    val topManga: StateFlow<List<AnilistManga>> = _topManga.asStateFlow()
     
-    private val _popularManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val popularManga: StateFlow<List<JikanManga>> = _popularManga.asStateFlow()
+    private val _popularManga = MutableStateFlow<List<AnilistManga>>(emptyList())
+    val popularManga: StateFlow<List<AnilistManga>> = _popularManga.asStateFlow()
     
-    private val _publishingManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val publishingManga: StateFlow<List<JikanManga>> = _publishingManga.asStateFlow()
+    private val _publishingManga = MutableStateFlow<List<AnilistManga>>(emptyList())
+    val publishingManga: StateFlow<List<AnilistManga>> = _publishingManga.asStateFlow()
 
-    private val _recommendedManga = MutableStateFlow<List<JikanManga>>(emptyList())
-    val recommendedManga: StateFlow<List<JikanManga>> = _recommendedManga.asStateFlow()
+    private val _recommendedManga = MutableStateFlow<List<AnilistManga>>(emptyList())
+    val recommendedManga: StateFlow<List<AnilistManga>> = _recommendedManga.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -59,27 +59,19 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
                     _forYouManga.value = emptyList()
                 }
                 
-                kotlinx.coroutines.delay(350)
+                // Load all other sections - AnilistApi handles rate limiting internally
                 
-                // Load all other sections
-                val topResponse = jikanApi.getTopManga(limit = 15)
-                _topManga.value = topResponse.data
+                val topResponse = anilistApi.getTopManga(limit = 15)
+                _topManga.value = topResponse
                 
-                // Small delay to respect Jikan rate limiting (3 requests/second)
-                kotlinx.coroutines.delay(350)
+                val popularResponse = anilistApi.getPopularManga(limit = 15)
+                _popularManga.value = popularResponse
                 
-                val popularResponse = jikanApi.getPopularManga(limit = 15)
-                _popularManga.value = popularResponse.data
-                
-                kotlinx.coroutines.delay(350)
-                
-                val publishingResponse = jikanApi.getPublishingManga(limit = 15)
-                _publishingManga.value = publishingResponse.data
+                val publishingResponse = anilistApi.getPublishingManga(limit = 15)
+                _publishingManga.value = publishingResponse
 
-                kotlinx.coroutines.delay(350)
-
-                val recommendedResponse = jikanApi.getRecommendations(limit = 15)
-                _recommendedManga.value = recommendedResponse.data
+                val recommendedResponse = anilistApi.getTrendingManga(limit = 15)
+                _recommendedManga.value = recommendedResponse
                 
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load manga"
@@ -93,8 +85,8 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
         presenterScope.launch {
             _isLoading.value = true
             try {
-                val response = jikanApi.searchManga(query, limit = 25)
-                _topManga.value = response.data
+                val response = anilistApi.searchManga(query, limit = 25)
+                _topManga.value = response
                 _popularManga.value = emptyList()
                 _publishingManga.value = emptyList()
                 _recommendedManga.value = emptyList()

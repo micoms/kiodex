@@ -10,6 +10,14 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.11.2]
+
+### Changes
+- Migrated from Jikan (MyAnimeList) API to AniList API
+- Improved rate limit handling for API requests
+- Updated search and recommendation engine to use AniList data
+
+
 ## [1.11.0]
 
 ### Additions

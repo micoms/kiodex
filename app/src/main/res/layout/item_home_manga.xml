@@ -88,14 +88,7 @@
             android:textColor="@color/library_comfortable_title_selector"
             tools:text="One Piece" />
 
-        <TextView
-            android:id="@+id/manga_type"
-            style="?textAppearanceBodySmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/library_comfortable_subtitle_selector"
-            android:textSize="11sp"
-            tools:text="Manga" />
+
 
     </LinearLayout>
 

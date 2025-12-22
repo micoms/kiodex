@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.jikan.JikanManga
+import eu.kanade.tachiyomi.data.anilist.AnilistManga
 import eu.kanade.tachiyomi.smartsearch.SmartSearchEngine
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.SourceManager
@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import uy.kohesive.injekt.injectLazy
 
 /**
- * Dialog to let user pick a source to search for a manga from Jikan
+ * Dialog to let user pick a source to search for a manga from AniList
  */
 class SourcePickerDialog(bundle: Bundle? = null) : DialogController(bundle) {
 
@@ -46,10 +46,10 @@ class SourcePickerDialog(bundle: Bundle? = null) : DialogController(bundle) {
     private var recycler: RecyclerView? = null
     private var titleView: TextView? = null
 
-    constructor(manga: JikanManga) : this(Bundle().apply {
-        putString(MANGA_TITLE_KEY, manga.title)
+    constructor(manga: AnilistManga) : this(Bundle().apply {
+        putString(MANGA_TITLE_KEY, manga.title.userTitle())
     }) {
-        mangaTitle = manga.title
+        mangaTitle = manga.title.userTitle()
     }
     
     override fun onCreateDialog(savedViewState: Bundle?): android.app.Dialog {
