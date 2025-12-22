@@ -57,7 +57,7 @@ data class AnilistTitle(
     val userPreferred: String? = null
 ) {
     // Helper to get best available title
-    fun userTitle(): String = userPreferred ?: english ?: romaji ?: native ?: ""
+    fun userTitle(): String = english ?: userPreferred ?: romaji ?: native ?: ""
 }
 
 @Serializable
