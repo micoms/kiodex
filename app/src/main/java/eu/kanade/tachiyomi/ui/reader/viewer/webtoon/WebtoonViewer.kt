@@ -199,13 +199,6 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
         val pages = page.chapter.pages ?: return
         Logger.d { "onPageSelected: ${page.number}/${pages.size}" }
         
-        // Reset scroll position when moving to a different page
-        // (but not when returning to the same page)
-        val previousPage = currentPage as? ReaderPage
-        if (previousPage != null && previousPage.index != page.index) {
-            page.chapter.chapter.scroll_position = 0
-        }
-        
         activity.onPageSelected(page, false)
 
         // Preload next chapter once we're within the last 5 pages of the current chapter
@@ -261,8 +254,6 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
             if (layoutManager.findLastEndVisibleItemPosition() == -1) {
                 onScrolled(position)
             }
-            // Restore saved scroll position within the page
-            restoreScrollPosition(page)
         } else {
             Logger.d { "Page $page not found in adapter" }
         }
@@ -289,6 +280,7 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
         val position = layoutManager.findLastEndVisibleItemPosition()
         val item = adapter.items.getOrNull(position) as? ReaderPage ?: return
         
+        // Only save scroll position, don't change anything else
         // Get the view for this position
         val viewHolder = recycler.findViewHolderForAdapterPosition(position) ?: return
         val view = viewHolder.itemView
@@ -309,9 +301,14 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
         if (scrollPosition > 0) {
             val itemPosition = adapter.items.indexOf(page)
             if (itemPosition != -1) {
-                // Scroll to position with offset to restore exact Y position
+                // Post to ensure the RecyclerView is laid out
                 recycler.post {
-                    layoutManager.scrollToPositionWithOffset(itemPosition, -scrollPosition)
+                    // Scroll to the page first
+                    layoutManager.scrollToPosition(itemPosition)
+                    // Then apply the Y-offset
+                    recycler.post {
+                        layoutManager.scrollToPositionWithOffset(itemPosition, -scrollPosition)
+                    }
                 }
             }
         }
