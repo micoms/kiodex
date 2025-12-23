@@ -35,7 +35,7 @@ KioDex is a fork created to explore modern Android development and provide a ref
 
 * **Advanced Source Selector**: Proactively searches all sources for availability.
 * **Modern UI**: Updated Home Page and Dialogs.
-* **Jikan Integration**: Seamless manga discovery via MyAnimeList API.
+* **AniList Integration**: Seamless manga discovery with personalized "For You" recommendations.
 
 </details>
 

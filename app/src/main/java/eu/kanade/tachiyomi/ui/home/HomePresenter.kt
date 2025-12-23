@@ -29,9 +29,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
     
     private val _publishingManga = MutableStateFlow<List<AnilistManga>>(emptyList())
     val publishingManga: StateFlow<List<AnilistManga>> = _publishingManga.asStateFlow()
-
-    private val _recommendedManga = MutableStateFlow<List<AnilistManga>>(emptyList())
-    val recommendedManga: StateFlow<List<AnilistManga>> = _recommendedManga.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -69,9 +66,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
                 
                 val publishingResponse = anilistApi.getPublishingManga(limit = 15)
                 _publishingManga.value = publishingResponse
-
-                val recommendedResponse = anilistApi.getTrendingManga(limit = 15)
-                _recommendedManga.value = recommendedResponse
                 
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load manga"
@@ -89,7 +83,6 @@ class HomePresenter : BaseCoroutinePresenter<HomeController>() {
                 _topManga.value = response
                 _popularManga.value = emptyList()
                 _publishingManga.value = emptyList()
-                _recommendedManga.value = emptyList()
                 _forYouManga.value = emptyList()
             } catch (e: Exception) {
                 _error.value = e.message

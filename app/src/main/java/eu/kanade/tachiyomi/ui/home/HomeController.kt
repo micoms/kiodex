@@ -41,7 +41,6 @@ class HomeController(bundle: Bundle? = null) :
     private var topMangaAdapter: HomeMangaAdapter? = null
     private var popularMangaAdapter: HomeMangaAdapter? = null
     private var publishingMangaAdapter: HomeMangaAdapter? = null
-    private var recommendationsAdapter: HomeMangaAdapter? = null
 
     override fun getTitle(): String? {
         return view?.context?.getString(MR.strings.home)
@@ -93,11 +92,6 @@ class HomeController(bundle: Bundle? = null) :
         binding.publishingMangaRecycler.adapter = publishingMangaAdapter
         binding.publishingMangaRecycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
 
-        // Setup recommendations section
-        recommendationsAdapter = HomeMangaAdapter { manga -> onMangaClick(manga) }
-        binding.recommendationsRecycler.adapter = recommendationsAdapter
-        binding.recommendationsRecycler.layoutManager = LinearLayoutManager(view.context, LinearLayoutManager.HORIZONTAL, false)
-
         // Observe presenter state
         
         // For You section - personalized recommendations
@@ -119,11 +113,6 @@ class HomeController(bundle: Bundle? = null) :
         presenter.publishingManga.onEach { manga ->
             publishingMangaAdapter?.submitList(manga)
             binding.publishingMangaSection.isVisible = manga.isNotEmpty()
-        }.launchIn(viewScope)
-
-        presenter.recommendedManga.onEach { manga ->
-            recommendationsAdapter?.submitList(manga)
-            binding.recommendationsSection.isVisible = manga.isNotEmpty()
         }.launchIn(viewScope)
 
         presenter.isLoading.onEach { loading ->
@@ -179,6 +168,5 @@ class HomeController(bundle: Bundle? = null) :
         topMangaAdapter = null
         popularMangaAdapter = null
         publishingMangaAdapter = null
-        recommendationsAdapter = null
     }
 }

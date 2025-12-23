@@ -583,9 +583,9 @@ class ReaderViewModel(
         // Cancel previous pending DB write
         saveProgressJob?.cancel()
         
-        // Schedule debounced DB write (1 second delay)
+        // Schedule debounced DB write (300ms delay for faster persistence)
         saveProgressJob = viewModelScope.launch {
-            delay(1000L)
+            delay(300L)
             flushPendingProgressSave()
             
             // Handle chapter completion after save
@@ -617,13 +617,26 @@ class ReaderViewModel(
     }
     
     /**
-     * Force saves any pending progress immediately.
+     * Force saves any pending progress immediately (blocking).
+     * Uses runBlocking to ensure progress is saved before activity destroys.
      * Should be called when leaving the reader to ensure progress is persisted.
      */
     fun forceSavePendingProgress() {
         saveProgressJob?.cancel()
-        viewModelScope.launchNonCancellableIO {
-            flushPendingProgressSave()
+        val data = pendingProgressSave ?: return
+        pendingProgressSave = null
+        
+        // Use runBlocking to guarantee save completes synchronously
+        runBlocking(Dispatchers.IO) {
+            updateChapter.await(
+                ChapterUpdate(
+                    id = data.chapterId,
+                    read = data.read,
+                    bookmark = data.bookmark,
+                    lastPageRead = data.lastPageRead.toLong(),
+                    pagesLeft = data.pagesLeft.toLong(),
+                )
+            )
         }
     }
 

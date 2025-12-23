@@ -45,12 +45,13 @@ class MangaRecommendationEngine {
             return emptyList()
         }
         
-        // Search for manga with similar genres
+        // Search for manga with similar genres using AniList's genre filter
         val recommendations = mutableListOf<AnilistManga>()
         
         for (genre in topGenres.take(3)) {
             try {
-                val genreResults = anilistApi.searchManga(genre, limit = 25)
+                // Use searchByGenre for accurate genre-based search
+                val genreResults = anilistApi.searchByGenre(genre, limit = 25)
                 recommendations.addAll(genreResults)
             } catch (e: Exception) {
                 // Continue with other genres if one fails

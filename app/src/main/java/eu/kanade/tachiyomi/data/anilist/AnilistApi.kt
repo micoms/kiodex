@@ -80,6 +80,22 @@ class AnilistApi {
         return executeQuery(baseQuery, variables)
     }
     
+    /**
+     * Search manga by genre using AniList's genre filter
+     * @param genre AniList genre name (e.g., "Action", "Romance", "Fantasy")
+     */
+    suspend fun searchByGenre(genre: String, page: Int = 1, limit: Int = 20): List<AnilistManga> {
+        val variables = buildJsonObject {
+            put("page", page)
+            put("perPage", limit)
+            put("type", "MANGA")
+            put("isAdult", false)
+            put("genre", genre)
+            put("sort", "POPULARITY_DESC")
+        }
+        return executeQuery(genreQuery, variables)
+    }
+    
     private fun JsonObjectBuilder.addCommonVariables(page: Int, limit: Int) {
         val allowedTypes = uiPreferences.homeContent().get()
         
@@ -168,6 +184,43 @@ class AnilistApi {
               hasNextPage
             }
             media (search: ${'$'}search, sort: ${'$'}sort, status: ${'$'}status, countryOfOrigin: ${'$'}countryOfOrigin, format: ${'$'}format, type: ${'$'}type, isAdult: ${'$'}isAdult) {
+              id
+              title {
+                romaji
+                english
+                native
+                userPreferred
+              }
+              coverImage {
+                extraLarge
+                large
+                medium
+                color
+              }
+              description
+              status
+              format
+              countryOfOrigin
+              averageScore
+              popularity
+              favourites
+              genres
+            }
+          }
+        }
+    """.trimIndent()
+    
+    private val genreQuery = """
+        query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}genre: String, ${'$'}sort: [MediaSort], ${'$'}type: MediaType, ${'$'}isAdult: Boolean) {
+          Page (page: ${'$'}page, perPage: ${'$'}perPage) {
+            pageInfo {
+              total
+              perPage
+              currentPage
+              lastPage
+              hasNextPage
+            }
+            media (genre: ${'$'}genre, sort: ${'$'}sort, type: ${'$'}type, isAdult: ${'$'}isAdult) {
               id
               title {
                 romaji
