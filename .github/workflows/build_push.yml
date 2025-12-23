@@ -196,7 +196,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION_TAG }}
-          name: Yōkai ${{ env.VERSION_TAG }}
+          name: KioDex ${{ env.VERSION_TAG }}
           body: |
             ${{ github.event.inputs.message }}
 
@@ -233,7 +233,7 @@ jobs:
         with:
           repository: null2264/kiodex-nightly
           tag_name: ${{ env.VERSION_TAG }}
-          name: Yōkai Nightly (${{ env.VERSION_TAG }})
+          name: KioDex Nightly (${{ env.VERSION_TAG }})
           body: |
             > [!CAUTION]
             > _**This alpha version is for testing only!**_
