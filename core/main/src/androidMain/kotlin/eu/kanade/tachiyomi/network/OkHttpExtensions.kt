@@ -118,13 +118,24 @@ suspend fun Call.awaitSuccess(): Response {
 }
 
 fun OkHttpClient.newCachelessCallWithProgress(request: Request, listener: ProgressListener): Call {
+    // Use WeakReference to prevent memory leak - allows GC to collect disposed pages
+    // even if the OkHttp call is still running
+    val weakListener = java.lang.ref.WeakReference(listener)
+    
     val progressClient = newBuilder()
         .cache(null)
         .addNetworkInterceptor { chain ->
             val originalResponse = chain.proceed(chain.request())
-            originalResponse.newBuilder()
-                .body(ProgressResponseBody(originalResponse.body, listener))
-                .build()
+            // Only wrap with progress body if listener is still alive
+            val currentListener = weakListener.get()
+            if (currentListener != null) {
+                originalResponse.newBuilder()
+                    .body(ProgressResponseBody(originalResponse.body, currentListener))
+                    .build()
+            } else {
+                // Listener was garbage collected, return response as-is
+                originalResponse
+            }
         }
         .build()
 
