@@ -91,7 +91,7 @@ class AnilistApi {
             put("type", "MANGA")
             put("isAdult", false)
             put("genre", genre)
-            put("sort", "POPULARITY_DESC")
+            put("sort", "SCORE_DESC")  // Sort by highest rated instead of most popular
         }
         return executeQuery(genreQuery, variables)
     }

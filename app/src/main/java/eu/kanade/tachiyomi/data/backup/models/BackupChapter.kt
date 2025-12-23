@@ -51,6 +51,7 @@ data class BackupChapter(
             bookmark: Boolean,
             lastPageRead: Long,
             pagesLeft: Long,
+            scrollPosition: Long,
             chapterNumber: Double,
             sourceOrder: Long,
             dateFetch: Long,

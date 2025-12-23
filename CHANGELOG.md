@@ -10,6 +10,25 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.11.5]
+
+### Additions
+- **Scroll position preservation for long strip/webtoon mode**: Resume reading at the exact scroll position within long images, even after closing the app
+  - Automatically saves Y-scroll offset while reading
+  - Works across app restarts and page transitions
+  - Per-page position tracking for independent scroll states
+
+### Changes
+- Chapter progress now saved instantly instead of being debounced for more reliable data persistence
+- Improved "For You" recommendations with history-based weighting
+  - Recently read manga (last 7 days) weighted 5x higher
+  - Manga read in last 30 days weighted 3x higher
+  - Changed sort from popularity to score for better personalization
+
+### Fixes
+- Fixed chapter/page progress not saving reliably when rapidly changing pages
+- Fixed scroll position resetting when navigating between pages in webtoon mode
+
 ## [1.11.4]
 
 ### Changes

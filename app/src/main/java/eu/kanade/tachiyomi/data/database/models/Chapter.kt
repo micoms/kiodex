@@ -16,6 +16,8 @@ interface Chapter : SChapter, Serializable {
 
     var last_page_read: Int
 
+    var scroll_position: Int
+
     var pages_left: Int
 
     var date_fetch: Long
@@ -32,6 +34,7 @@ interface Chapter : SChapter, Serializable {
             bookmark = this.bookmark,
             lastPageRead = this.last_page_read.toLong(),
             pagesLeft = this.pages_left.toLong(),
+            scrollPosition = this.scroll_position.toLong(),
         )
 
     companion object {
@@ -58,6 +61,7 @@ interface Chapter : SChapter, Serializable {
             bookmark: Boolean,
             lastPageRead: Long,
             pagesLeft: Long,
+            scrollPosition: Long,
             chapterNumber: Double,
             sourceOrder: Long,
             dateFetch: Long,
@@ -72,6 +76,7 @@ interface Chapter : SChapter, Serializable {
             this.bookmark = bookmark
             this.last_page_read = lastPageRead.toInt()
             this.pages_left = pagesLeft.toInt()
+            this.scroll_position = scrollPosition.toInt()
             this.chapter_number = chapterNumber.toFloat()
             this.source_order = sourceOrder.toInt()
             this.date_fetch = dateFetch
@@ -86,6 +91,7 @@ interface Chapter : SChapter, Serializable {
         bookmark = other.bookmark
         last_page_read = other.last_page_read
         pages_left = other.pages_left
+        scroll_position = other.scroll_position
         date_fetch = other.date_fetch
         source_order = other.source_order
         copyFrom(other as SChapter)

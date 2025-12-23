@@ -214,6 +214,7 @@ JOIN (
         NULL AS date_upload,
         NULL AS last_page_read,
         NULL AS pages_left,
+        NULL AS scroll_position,
         NULL AS chapter_number,
         NULL AS source_order
 ) AS C

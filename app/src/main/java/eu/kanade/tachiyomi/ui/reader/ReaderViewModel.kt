@@ -159,26 +159,6 @@ class ReaderViewModel(
     private var finished = false
     private var chapterToDownload: Download? = null
     
-    /**
-     * Job for debouncing chapter progress saves to reduce DB writes during rapid page changes.
-     * Cancelled and replaced on each page change, only writes to DB after debounce period.
-     */
-    private var saveProgressJob: Job? = null
-    
-    /**
-     * Stores pending chapter progress for debounced save.
-     * Updated immediately on page change for instant UI feedback.
-     */
-    private var pendingProgressSave: ChapterProgressData? = null
-    
-    private data class ChapterProgressData(
-        val chapterId: Long,
-        val lastPageRead: Int,
-        val pagesLeft: Int,
-        val read: Boolean,
-        val bookmark: Boolean,
-    )
-
     private val unfilteredChapterList by lazy {
         val manga = manga!!
         runBlocking { getChapter.awaitAll(manga, filterScanlators = false) }
@@ -214,12 +194,6 @@ class ReaderViewModel(
     fun onBackPressed() {
         if (finished) return
         finished = true
-        
-        // Force save any pending chapter progress before leaving
-        saveProgressJob?.cancel()
-        viewModelScope.launchNonCancellableIO {
-            flushPendingProgressSave()
-        }
         
         deletePendingChapters()
         val currentChapters = state.value.viewerChapters
@@ -534,8 +508,10 @@ class ReaderViewModel(
 
         val selectedChapter = page.chapter
 
-        // Save last page read with debouncing for better performance
-        saveChapterProgressDebounced(selectedChapter, page, hasExtraPage)
+        // Save last page read instantly (like komikku)
+        viewModelScope.launchNonCancellableIO {
+            saveChapterProgress(selectedChapter, page, hasExtraPage)
+        }
 
         if (selectedChapter != currentChapters.currChapter) {
             Logger.d { "Setting ${selectedChapter.chapter.url} as active" }
@@ -548,97 +524,7 @@ class ReaderViewModel(
             downloadNextChapters()
         }
     }
-    
-    /**
-     * Debounced chapter progress saving for improved performance.
-     * Updates in-memory state immediately for instant UI feedback,
-     * then delays DB write to coalesce rapid page changes.
-     */
-    private fun saveChapterProgressDebounced(readerChapter: ReaderChapter, page: ReaderPage, hasExtraPage: Boolean) {
-        val shouldTrack = !preferences.incognitoMode().get() || hasTrackers
-        if (!shouldTrack || page.status is Page.State.Error) return
-        
-        // Update in-memory state immediately for instant UI feedback
-        readerChapter.chapter.last_page_read = page.index
-        readerChapter.chapter.pages_left = (readerChapter.pages?.size ?: page.index) - page.index
-        readerChapter.requestedPage = page.index
-        
-        // Check if chapter is complete
-        val isComplete = (readerChapter.pages?.lastIndex == page.index && page.firstHalf != true) ||
-            (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
-        
-        if (isComplete) {
-            readerChapter.chapter.read = true
-        }
-        
-        // Store pending progress for debounced write
-        pendingProgressSave = ChapterProgressData(
-            chapterId = readerChapter.chapter.id!!,
-            lastPageRead = readerChapter.chapter.last_page_read,
-            pagesLeft = readerChapter.chapter.pages_left,
-            read = readerChapter.chapter.read,
-            bookmark = readerChapter.chapter.bookmark,
-        )
-        
-        // Cancel previous pending DB write
-        saveProgressJob?.cancel()
-        
-        // Schedule debounced DB write (300ms delay for faster persistence)
-        saveProgressJob = viewModelScope.launch {
-            delay(300L)
-            flushPendingProgressSave()
-            
-            // Handle chapter completion after save
-            if (isComplete) {
-                updateTrackChapterAfterReading(readerChapter)
-                deleteChapterIfNeeded(readerChapter)
-                handleDuplicateChapters(readerChapter)
-            }
-        }
-    }
-    
-    /**
-     * Immediately flushes any pending chapter progress to the database.
-     * Called on debounce timeout and when leaving the reader.
-     */
-    private suspend fun flushPendingProgressSave() {
-        val data = pendingProgressSave ?: return
-        pendingProgressSave = null
-        
-        updateChapter.await(
-            ChapterUpdate(
-                id = data.chapterId,
-                read = data.read,
-                bookmark = data.bookmark,
-                lastPageRead = data.lastPageRead.toLong(),
-                pagesLeft = data.pagesLeft.toLong(),
-            )
-        )
-    }
-    
-    /**
-     * Force saves any pending progress immediately (blocking).
-     * Uses runBlocking to ensure progress is saved before activity destroys.
-     * Should be called when leaving the reader to ensure progress is persisted.
-     */
-    fun forceSavePendingProgress() {
-        saveProgressJob?.cancel()
-        val data = pendingProgressSave ?: return
-        pendingProgressSave = null
-        
-        // Use runBlocking to guarantee save completes synchronously
-        runBlocking(Dispatchers.IO) {
-            updateChapter.await(
-                ChapterUpdate(
-                    id = data.chapterId,
-                    read = data.read,
-                    bookmark = data.bookmark,
-                    lastPageRead = data.lastPageRead.toLong(),
-                    pagesLeft = data.pagesLeft.toLong(),
-                )
-            )
-        }
-    }
+
 
     private fun downloadNextChapters() {
         val manga = manga ?: return
@@ -722,43 +608,53 @@ class ReaderViewModel(
 
     /**
      * Saves this [readerChapter]'s progress (last read page and whether it's read).
-     * If incognito mode isn't on or has at least 1 tracker
+     * If incognito mode isn't on or has at least 1 tracker.
+     * Now uses instant saving like komikku for reliability.
      */
     private suspend fun saveChapterProgress(readerChapter: ReaderChapter, page: ReaderPage, hasExtraPage: Boolean) {
-        readerChapter.requestedPage = readerChapter.chapter.last_page_read
+        val shouldTrack = !preferences.incognitoMode().get() || hasTrackers
+        if (!shouldTrack || page.status is Page.State.Error) return
+        
+        // Update in-memory state
+        readerChapter.chapter.last_page_read = page.index
+        readerChapter.chapter.pages_left = (readerChapter.pages?.size ?: page.index) - page.index
+        readerChapter.requestedPage = page.index
+        
+        // Refresh bookmark status from DB
         getChapter.awaitById(readerChapter.chapter.id!!)?.let { dbChapter ->
             readerChapter.chapter.bookmark = dbChapter.bookmark
         }
 
-        val shouldTrack = !preferences.incognitoMode().get() || hasTrackers
-        if (shouldTrack && page.status !is Page.State.Error) {
-            readerChapter.chapter.last_page_read = page.index
-            readerChapter.chapter.pages_left = (readerChapter.pages?.size ?: page.index) - page.index
-            // For double pages, check if the second to last page is doubled up
-            if (
-                (readerChapter.pages?.lastIndex == page.index && page.firstHalf != true) ||
-                (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
-            ) {
-                onChapterReadComplete(readerChapter)
-            }
+        // Check if chapter is complete
+        val isComplete = (readerChapter.pages?.lastIndex == page.index && page.firstHalf != true) ||
+            (hasExtraPage && readerChapter.pages?.lastIndex?.minus(1) == page.index)
+        
+        if (isComplete) {
+            readerChapter.chapter.read = true
+        }
 
-            updateChapter.await(
-                ChapterUpdate(
-                    id = readerChapter.chapter.id!!,
-                    read = readerChapter.chapter.read,
-                    bookmark = readerChapter.chapter.bookmark,
-                    lastPageRead = readerChapter.chapter.last_page_read.toLong(),
-                    pagesLeft = readerChapter.chapter.pages_left.toLong(),
-                )
+        // Save to database immediately (instant saving like komikku)
+        updateChapter.await(
+            ChapterUpdate(
+                id = readerChapter.chapter.id!!,
+                read = readerChapter.chapter.read,
+                bookmark = readerChapter.chapter.bookmark,
+                lastPageRead = readerChapter.chapter.last_page_read.toLong(),
+                pagesLeft = readerChapter.chapter.pages_left.toLong(),
+                scrollPosition = readerChapter.chapter.scroll_position.toLong(),
             )
+        )
+        
+        // Handle chapter completion
+        if (isComplete) {
+            updateTrackChapterAfterReading(readerChapter)
+            deleteChapterIfNeeded(readerChapter)
+            handleDuplicateChapters(readerChapter)
         }
     }
 
     private suspend fun onChapterReadComplete(readerChapter: ReaderChapter) {
         readerChapter.chapter.read = true
-        updateTrackChapterAfterReading(readerChapter)
-        deleteChapterIfNeeded(readerChapter)
-        handleDuplicateChapters(readerChapter)
     }
     
     /**

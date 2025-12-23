@@ -1304,7 +1304,6 @@ class ReaderActivity : BaseActivity<ReaderActivityBinding>() {
     }
 
     override fun onPause() {
-        viewModel.forceSavePendingProgress()
         viewModel.flushReadTimer()
         super.onPause()
     }

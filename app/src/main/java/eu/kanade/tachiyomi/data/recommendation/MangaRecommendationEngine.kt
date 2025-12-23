@@ -5,6 +5,9 @@ import eu.kanade.tachiyomi.data.anilist.AnilistApi
 import eu.kanade.tachiyomi.data.anilist.AnilistManga
 import uy.kohesive.injekt.injectLazy
 import yokai.domain.manga.interactor.GetLibraryManga
+import yokai.domain.history.interactor.GetHistory
+import java.util.Date
+import java.util.concurrent.TimeUnit
 
 /**
  * Manga Recommendation Engine that analyzes user's library to provide personalized recommendations.
@@ -20,6 +23,7 @@ class MangaRecommendationEngine {
     
     private val anilistApi = AnilistApi()
     private val getLibraryManga: GetLibraryManga by injectLazy()
+    private val getHistory: GetHistory by injectLazy()
     
     /**
      * Get personalized manga recommendations based on user's library
@@ -76,36 +80,67 @@ class MangaRecommendationEngine {
     }
     
     /**
-     * Extract top genres from user's library, weighted by reading activity
+     * Extract top genres from user's library, weighted by reading activity and recency
      * 
      * @param libraryManga List of manga in user's library
-     * @return List of genre names, sorted by frequency
+     * @return List of genre names, sorted by weighted frequency
      */
-    private fun getTopGenres(libraryManga: List<LibraryManga>): List<String> {
-        val genreCount = mutableMapOf<String, Int>()
+    private suspend fun getTopGenres(libraryManga: List<LibraryManga>): List<String> {
+        val genreWeights = mutableMapOf<String, Double>()
+        val currentTime = Date().time
+        
+        // Time thresholds in milliseconds
+        val oneWeek = TimeUnit.DAYS.toMillis(7)
+        val oneMonth = TimeUnit.DAYS.toMillis(30)
         
         for (manga in libraryManga) {
-            // Get genres from manga - uses getOriginalGenres() which splits the genre string
+            // Get genres from manga
             val genres: List<String> = manga.manga.getOriginalGenres() ?: continue
             
-            // Weight by read status (manga with more progress = more weight)
-            val weight = when {
-                manga.read > 0 -> 2  // Has been read
-                else -> 1
+            // Skip manga with no read progress
+            if (manga.read == 0) continue
+            
+            // Get reading history for this manga
+            val history = try {
+                getHistory.awaitByMangaId(manga.manga.id ?: continue)
+            } catch (e: Exception) {
+                null
             }
             
+            // Calculate weight based on recency and reading progress
+            val weight = if (history != null && history.last_read > 0) {
+                val timeSinceLastRead = currentTime - history.last_read
+                val recencyWeight = when {
+                    timeSinceLastRead < oneWeek -> 5.0   // Read in last week = 5x weight
+                    timeSinceLastRead < oneMonth -> 3.0  // Read in last month = 3x weight
+                    else -> 1.0                          // Older reads = 1x weight
+                }
+                
+                // Also weight by reading progress (more chapters read = more relevant)
+                val progressWeight = when {
+                    manga.read >= 10 -> 1.5  // Read 10+ chapters
+                    manga.read >= 5 -> 1.2   // Read 5+ chapters
+                    manga.read >= 2 -> 1.0   // Read 2+ chapters
+                    else -> 0.3              // Only 1 chapter (might be a test read)
+                }
+                
+                recencyWeight * progressWeight
+            } else {
+                // No history data, use basic read count weighting
+                if (manga.read >= 5) 1.0 else 0.5
+            }
+            
+            // Apply weight to all genres of this manga
             genres.forEach { genre ->
                 val normalizedGenre = genre.trim()
                 if (normalizedGenre.isNotBlank()) {
-                    genreCount[normalizedGenre] = (genreCount[normalizedGenre] ?: 0) + weight
+                    genreWeights[normalizedGenre] = (genreWeights[normalizedGenre] ?: 0.0) + weight
                 }
             }
         }
-
         
-        // Return top genres sorted by count
-        // Note: AniList genres are specific (Action, Adventure, etc.) - simple string matching usually works
-        return genreCount.entries
+        // Return top genres sorted by weighted count
+        return genreWeights.entries
             .sortedByDescending { it.value }
             .take(5)
             .map { it.key }

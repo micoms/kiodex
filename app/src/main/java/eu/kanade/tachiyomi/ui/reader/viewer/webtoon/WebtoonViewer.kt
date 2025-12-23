@@ -98,6 +98,9 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
                     if (lastItem is ChapterTransition.Next && lastItem.to == null) {
                         activity.showMenu()
                     }
+                    
+                    // Track scroll position for current page
+                    saveCurrentScrollPosition()
                 }
             },
         )
@@ -195,6 +198,14 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
     private fun onPageSelected(page: ReaderPage, allowPreload: Boolean) {
         val pages = page.chapter.pages ?: return
         Logger.d { "onPageSelected: ${page.number}/${pages.size}" }
+        
+        // Reset scroll position when moving to a different page
+        // (but not when returning to the same page)
+        val previousPage = currentPage as? ReaderPage
+        if (previousPage != null && previousPage.index != page.index) {
+            page.chapter.chapter.scroll_position = 0
+        }
+        
         activity.onPageSelected(page, false)
 
         // Preload next chapter once we're within the last 5 pages of the current chapter
@@ -250,6 +261,8 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
             if (layoutManager.findLastEndVisibleItemPosition() == -1) {
                 onScrolled(position)
             }
+            // Restore saved scroll position within the page
+            restoreScrollPosition(page)
         } else {
             Logger.d { "Page $page not found in adapter" }
         }
@@ -264,6 +277,42 @@ class WebtoonViewer(val activity: ReaderActivity, val hasMargins: Boolean = fals
             when (item) {
                 is ReaderPage -> onPageSelected(item, allowPreload)
                 is ChapterTransition -> onTransitionSelected(item)
+            }
+        }
+    }
+
+    /**
+     * Save the current scroll position for the visible page.
+     * This allows resuming at the exact scroll position within long webtoon images.
+     */
+    private fun saveCurrentScrollPosition() {
+        val position = layoutManager.findLastEndVisibleItemPosition()
+        val item = adapter.items.getOrNull(position) as? ReaderPage ?: return
+        
+        // Get the view for this position
+        val viewHolder = recycler.findViewHolderForAdapterPosition(position) ?: return
+        val view = viewHolder.itemView
+        
+        // Calculate scroll offset from top of the view
+        val scrollY = -view.top
+        if (scrollY >= 0) {
+            item.chapter.chapter.scroll_position = scrollY
+        }
+    }
+
+    /**
+     * Restore scroll position for a page when moving to it.
+     * Used to resume reading at the exact scroll position within long images.
+     */
+    fun restoreScrollPosition(page: ReaderPage) {
+        val scrollPosition = page.chapter.chapter.scroll_position
+        if (scrollPosition > 0) {
+            val itemPosition = adapter.items.indexOf(page)
+            if (itemPosition != -1) {
+                // Scroll to position with offset to restore exact Y position
+                recycler.post {
+                    layoutManager.scrollToPositionWithOffset(itemPosition, -scrollPosition)
+                }
             }
         }
     }

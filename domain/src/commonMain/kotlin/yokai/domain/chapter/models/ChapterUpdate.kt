@@ -10,6 +10,7 @@ data class ChapterUpdate(
     val bookmark: Boolean? = null,
     val lastPageRead: Long? = null,
     val pagesLeft: Long? = null,
+    val scrollPosition: Long? = null,
     val chapterNumber: Double? = null,
     val sourceOrder: Long? = null,
     val dateFetch: Long? = null,
