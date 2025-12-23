@@ -10,6 +10,12 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.11.4]
+
+### Changes
+- Fix manga chapter not updating properly
+
+
 ## [1.11.2]
 
 ### Changes
