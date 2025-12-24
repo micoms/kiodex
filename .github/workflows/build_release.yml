@@ -107,12 +107,7 @@ jobs:
           java-version: 17
           distribution: temurin
 
-      - name: Write client_secrets.json
-        uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
-        with:
-          path: app/src/main/assets/client_secrets.json
-          contents: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }}
-          write-mode: overwrite
+
 
       - name: Set up gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
