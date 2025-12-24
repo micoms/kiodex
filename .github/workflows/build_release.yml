@@ -95,7 +95,6 @@ jobs:
     name: Build release app
     runs-on: 'ubuntu-24.04'
     needs: prepare-build
-    needs: prepare-build
     steps:
       - name: Clone Repository (${{ needs.prepare-build.outputs.VERSION_TAG }})
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
