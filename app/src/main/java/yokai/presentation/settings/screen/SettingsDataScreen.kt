@@ -54,6 +54,9 @@ import uy.kohesive.injekt.injectLazy
 import yokai.domain.backup.BackupPreferences
 import yokai.domain.storage.StorageManager
 import yokai.domain.storage.StoragePreferences
+import yokai.domain.sync.SyncPreferences
+import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.data.sync.SyncManager
 import yokai.i18n.MR
 import yokai.presentation.component.ToolTipButton
 import yokai.presentation.component.preference.Preference
@@ -87,9 +90,13 @@ object SettingsDataScreen : ComposableSettings {
         val storagePreferences: StoragePreferences by injectLazy()
         val backupPreferences: BackupPreferences by injectLazy()
 
+        val syncPreferences: SyncPreferences by injectLazy()
+        val syncService by syncPreferences.syncService().collectAsState()
+
         return persistentListOf(
             getStorageLocationPreference(storagePreferences = storagePreferences),
             getBackupAndRestoreGroup(backupPreferences = backupPreferences),
+            getSyncGroup(syncPreferences = syncPreferences, syncService = syncService),
             getDataGroup(),
         )
     }
@@ -328,6 +335,117 @@ object SettingsDataScreen : ComposableSettings {
                     title = stringResource(MR.strings.pref_auto_clear_chapter_cache),
                 ),
                  */
+            ),
+        )
+    }
+
+    @Composable
+    private fun getSyncGroup(syncPreferences: SyncPreferences, syncService: Int): Preference.PreferenceGroup {
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val lastSync by syncPreferences.lastSyncTimestamp().collectAsState()
+
+        // Get string resources for trigger options
+        val triggerEntries = persistentMapOf(
+            SyncPreferences.TRIGGER_KEY_CHAPTER_READ to stringResource(MR.strings.sync_on_chapter_read),
+            SyncPreferences.TRIGGER_KEY_CHAPTER_OPEN to stringResource(MR.strings.sync_on_chapter_open),
+            SyncPreferences.TRIGGER_KEY_APP_START to stringResource(MR.strings.sync_on_app_start),
+            SyncPreferences.TRIGGER_KEY_APP_RESUME to stringResource(MR.strings.sync_on_app_resume),
+        )
+
+        // Get string resources for what-to-sync options
+        val syncSettingsEntries = persistentMapOf(
+            SyncPreferences.SYNC_KEY_LIBRARY_ENTRIES to stringResource(MR.strings.library_entries),
+            SyncPreferences.SYNC_KEY_CATEGORIES to stringResource(MR.strings.categories),
+            SyncPreferences.SYNC_KEY_CHAPTERS to stringResource(MR.strings.chapters),
+            SyncPreferences.SYNC_KEY_TRACKING to stringResource(MR.strings.tracking),
+            SyncPreferences.SYNC_KEY_HISTORY to stringResource(MR.strings.history),
+            SyncPreferences.SYNC_KEY_CUSTOM_INFO to stringResource(MR.strings.custom_manga_info),
+            SyncPreferences.SYNC_KEY_READ_MANGA to stringResource(MR.strings.all_read_manga),
+            SyncPreferences.SYNC_KEY_APP_PREFS to stringResource(MR.strings.app_settings),
+            SyncPreferences.SYNC_KEY_SOURCE_PREFS to stringResource(MR.strings.source_settings),
+            SyncPreferences.SYNC_KEY_INCLUDE_PRIVATE to stringResource(MR.strings.backup_private_pref),
+        )
+
+        return Preference.PreferenceGroup(
+            title = stringResource(MR.strings.sync),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.ListPreference(
+                    pref = syncPreferences.syncService(),
+                    title = stringResource(MR.strings.pref_sync_service),
+                    entries = persistentMapOf(
+                        SyncManager.SyncService.NONE.value to stringResource(MR.strings.off),
+                        SyncManager.SyncService.SYNCYOMI.value to stringResource(MR.strings.syncyomi),
+                    ),
+                    onValueChanged = {
+                        if (it != SyncManager.SyncService.NONE.value) {
+                            SyncDataJob.setupTask(context)
+                        } else {
+                            SyncDataJob.setupTask(context, prefInterval = 0)
+                        }
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    pref = syncPreferences.clientHost(),
+                    title = stringResource(MR.strings.pref_sync_host),
+                    subtitle = stringResource(MR.strings.pref_sync_host_summ),
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
+                Preference.PreferenceItem.EditTextPreference(
+                    pref = syncPreferences.clientAPIKey(),
+                    title = stringResource(MR.strings.pref_sync_api_key),
+                    subtitle = stringResource(MR.strings.pref_sync_api_key_summ),
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    pref = syncPreferences.syncInterval(),
+                    title = stringResource(MR.strings.pref_sync_interval),
+                    entries = persistentMapOf(
+                        0 to stringResource(MR.strings.manual),
+                        30 to stringResource(MR.strings.every_30_min),
+                        60 to stringResource(MR.strings.every_hour),
+                        180 to stringResource(MR.strings.every_3_hours),
+                        360 to stringResource(MR.strings.every_6_hours),
+                        720 to stringResource(MR.strings.every_12_hours),
+                        1440 to stringResource(MR.strings.daily),
+                    ),
+                    onValueChanged = {
+                        SyncDataJob.setupTask(context, prefInterval = it)
+                        true
+                    },
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(MR.strings.pref_sync_now),
+                    subtitle = if (lastSync > 0) {
+                        stringResource(MR.strings.last_sync_info, relativeTimeSpanString(lastSync))
+                    } else {
+                        stringResource(MR.strings.pref_sync_now_subtitle)
+                    },
+                    onClick = {
+                        if (!SyncDataJob.isRunning(context)) {
+                            SyncDataJob.startNow(context, manual = true)
+                        } else {
+                            context.toast(MR.strings.sync_in_progress)
+                        }
+                    },
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
+                // Sync trigger options picker
+                Preference.PreferenceItem.MultiSelectListPreference(
+                    pref = syncPreferences.syncTriggerKeys(),
+                    title = stringResource(MR.strings.pref_sync_options),
+                    entries = triggerEntries,
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
+                // What to sync picker
+                Preference.PreferenceItem.MultiSelectListPreference(
+                    pref = syncPreferences.syncSettingsKeys(),
+                    title = stringResource(MR.strings.pref_choose_what_to_sync),
+                    entries = syncSettingsEntries,
+                    enabled = syncService != SyncManager.SyncService.NONE.value,
+                ),
             ),
         )
     }

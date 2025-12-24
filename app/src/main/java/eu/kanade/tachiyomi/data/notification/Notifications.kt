@@ -90,6 +90,14 @@ object Notifications {
     const val CHANNEL_INCOGNITO_MODE = "incognito_mode_channel"
     const val ID_INCOGNITO_MODE = -701
 
+    /**
+     * Notification channel and ids used for sync.
+     */
+    private const val GROUP_SYNC = "group_sync"
+    const val CHANNEL_SYNC_PROGRESS = "sync_progress_channel"
+    const val ID_SYNC_PROGRESS = -801
+    const val ID_SYNC_COMPLETE = -802
+
     private val deprecatedChannels = listOf(
         "backup_restore_channel",
         "library_channel",
@@ -117,6 +125,7 @@ object Notifications {
             ),
             NotificationChannelGroup(GROUP_APP_UPDATES, context.getString(MR.strings.app_updates)),
             NotificationChannelGroup(GROUP_LIBRARY, context.getString(MR.strings.library)),
+            NotificationChannelGroup(GROUP_SYNC, context.getString(MR.strings.sync)),
         ).forEach(context.notificationManager::createNotificationChannelGroup)
 
         val channels = listOf(
@@ -232,6 +241,14 @@ object Notifications {
             ).apply {
                 setShowBadge(false)
                 group = GROUP_APP_UPDATES
+            },
+            NotificationChannel(
+                CHANNEL_SYNC_PROGRESS,
+                context.getString(MR.strings.syncing_library),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                group = GROUP_SYNC
+                setShowBadge(false)
             },
         )
         context.notificationManager.createNotificationChannels(channels)

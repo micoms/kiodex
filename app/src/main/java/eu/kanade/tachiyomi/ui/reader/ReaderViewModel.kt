@@ -88,6 +88,8 @@ import yokai.domain.manga.interactor.InsertManga
 import yokai.domain.manga.interactor.UpdateManga
 import yokai.domain.manga.models.MangaUpdate
 import yokai.domain.storage.StorageManager
+import yokai.domain.sync.SyncPreferences
+import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import yokai.domain.track.interactor.GetTrack
 import yokai.i18n.MR
 import yokai.util.lang.getString
@@ -116,6 +118,7 @@ class ReaderViewModel(
     private val getHistory: GetHistory by injectLazy()
     private val upsertHistory: UpsertHistory by injectLazy()
     private val getTrack: GetTrack by injectLazy()
+    private val syncPreferences: SyncPreferences by injectLazy()
 
     private val mutableState = MutableStateFlow(State())
     val state = mutableState.asStateFlow()
@@ -615,6 +618,10 @@ class ReaderViewModel(
         val shouldTrack = !preferences.incognitoMode().get() || hasTrackers
         if (!shouldTrack || page.status is Page.State.Error) return
         
+        val isSyncEnabled = syncPreferences.isSyncEnabled()
+        val syncTriggerOpt = syncPreferences.getSyncTriggerOptions()
+        val isFirstPage = readerChapter.chapter.last_page_read == 0
+        
         // Update in-memory state
         readerChapter.chapter.last_page_read = page.index
         readerChapter.chapter.pages_left = (readerChapter.pages?.size ?: page.index) - page.index
@@ -645,11 +652,27 @@ class ReaderViewModel(
             )
         )
         
+        // Trigger sync on chapter open (first page)
+        if (isSyncEnabled && syncTriggerOpt.syncOnChapterOpen && isFirstPage) {
+            val context = Injekt.get<Application>()
+            if (!SyncDataJob.isRunning(context)) {
+                SyncDataJob.startNow(context, manual = false)
+            }
+        }
+        
         // Handle chapter completion
         if (isComplete) {
             updateTrackChapterAfterReading(readerChapter)
             deleteChapterIfNeeded(readerChapter)
             handleDuplicateChapters(readerChapter)
+            
+            // Trigger sync on chapter read (completion)
+            if (isSyncEnabled && syncTriggerOpt.syncOnChapterRead) {
+                val context = Injekt.get<Application>()
+                if (!SyncDataJob.isRunning(context)) {
+                    SyncDataJob.startNow(context, manual = false)
+                }
+            }
         }
     }
 

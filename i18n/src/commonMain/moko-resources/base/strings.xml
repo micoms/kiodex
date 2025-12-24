@@ -812,6 +812,34 @@
     <string name="backup_private_pref">Include sensitive settings (e.g. tracker login tokens)</string>
     <string name="last_auto_backup_info">Last automatically backed up: %s</string>
 
+    <!-- Sync -->
+    <string name="sync">Sync</string>
+    <string name="syncing_library">Syncing library</string>
+    <string name="sync_complete">Sync complete</string>
+    <string name="sync_error">Sync error</string>
+    <string name="pref_sync_service">Sync service</string>
+    <string name="pref_sync_host">Server URL</string>
+    <string name="pref_sync_host_summ">Enter your SyncYomi server URL</string>
+    <string name="pref_sync_api_key">API Key</string>
+    <string name="pref_sync_api_key_summ">Enter your SyncYomi API key</string>
+    <string name="pref_sync_now">Sync now</string>
+    <string name="pref_sync_now_subtitle">Sync library with remote server</string>
+    <string name="sync_in_progress">Sync already in progress</string>
+    <string name="last_sync_info">Last sync: %s</string>
+    <string name="syncyomi" translatable="false">SyncYomi</string>
+    <string name="pref_sync_interval">Sync interval</string>
+    <string name="pref_choose_what_to_sync">Choose what to sync</string>
+    <string name="pref_sync_options">Sync trigger options</string>
+    <string name="label_triggers">Triggers</string>
+    <string name="sync_on_chapter_read">Sync after marking chapter as read</string>
+    <string name="sync_on_chapter_open">Sync when opening a chapter</string>
+    <string name="sync_on_app_start">Sync on app start</string>
+    <string name="sync_on_app_resume">Sync on app resume</string>
+    <string name="library_entries">Library entries</string>
+    <string name="app_settings">App settings</string>
+    <string name="source_settings">Source settings</string>
+    <string name="label_what_to_sync">What to sync</string>
+
     <!-- Advanced section -->
     <string name="clear_chapter_cache">Clear chapter cache</string>
     <string name="force_download_cache_refresh">Reindex downloads</string>
@@ -836,6 +864,7 @@
     <string name="user_agent_string">Default user agent string</string>
     <string name="error_user_agent_string_invalid">Invalid user agent string</string>
     <string name="disabled">Disabled</string>
+    <string name="off">Off</string>
     <string name="cloudflare" translatable="false">Cloudflare</string>
     <string name="google" translatable="false">Google</string>
     <string name="ad_guard" translatable="false">AdGuard</string>
@@ -1046,6 +1075,9 @@
 
     <!-- Time -->
     <string name="manual">Manual</string>
+    <string name="every_30_min">Every 30 minutes</string>
+    <string name="every_hour">Every hour</string>
+    <string name="every_3_hours">Every 3 hours</string>
     <string name="every_6_hours">Every 6 hours</string>
     <string name="every_12_hours">Every 12 hours</string>
     <string name="daily">Daily</string>

@@ -82,6 +82,8 @@ import yokai.domain.base.BasePreferences
 import yokai.domain.storage.StorageManager
 import yokai.i18n.MR
 import yokai.util.lang.getString
+import yokai.domain.sync.SyncPreferences
+import eu.kanade.tachiyomi.data.sync.SyncDataJob
 
 open class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factory {
 
@@ -89,6 +91,7 @@ open class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.F
     val basePreferences: BasePreferences by injectLazy()
     val networkPreferences: NetworkPreferences by injectLazy()
     private val storageManager: StorageManager by injectLazy()
+    private val syncPreferences: SyncPreferences by injectLazy()
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
@@ -189,6 +192,20 @@ open class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.F
             .launchIn(scope)
 
         initializeMigrator()
+        
+        // Trigger sync on app start if enabled
+        triggerSyncOnAppStart()
+    }
+    
+    private fun triggerSyncOnAppStart() {
+        val triggerOptions = syncPreferences.getSyncTriggerOptions()
+        if (syncPreferences.isSyncEnabled() && triggerOptions.syncOnAppStart) {
+            ProcessLifecycleOwner.get().lifecycleScope.launchIO {
+                if (!SyncDataJob.isRunning(this@App)) {
+                    SyncDataJob.startNow(this@App, manual = false)
+                }
+            }
+        }
     }
 
     private fun initializeMigrator() {
@@ -215,6 +232,18 @@ open class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.F
     override fun onPause(owner: LifecycleOwner) {
         if (!AuthenticatorUtil.isAuthenticating && preferences.lockAfter().get() >= 0) {
             SecureActivityDelegate.locked = true
+        }
+    }
+    
+    override fun onResume(owner: LifecycleOwner) {
+        // Trigger sync on app resume if enabled
+        val triggerOptions = syncPreferences.getSyncTriggerOptions()
+        if (syncPreferences.isSyncEnabled() && triggerOptions.syncOnAppResume) {
+            ProcessLifecycleOwner.get().lifecycleScope.launchIO {
+                if (!SyncDataJob.isRunning(this@App)) {
+                    SyncDataJob.startNow(this@App, manual = false)
+                }
+            }
         }
     }
 

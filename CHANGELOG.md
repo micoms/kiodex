@@ -10,6 +10,19 @@ The format is simplified version of [Keep a Changelog](https://keepachangelog.co
 
 ## [Unreleased]
 
+## [1.12.0]
+
+### Additions
+- Add SyncYomi sync service integration for cross-device library synchronization
+  - Sync library entries, categories, chapters, tracking, history
+  - Sync app settings, source settings, and custom manga info
+  - Sync trigger options: sync on chapter read, chapter open, app start, app resume
+  - Choose what to sync with MultiSelect picker dialogs
+- Add sync interval options: manual, 30 min, 1 hour, 3/6/12 hours, daily
+
+### Changes
+- Improved chapter merge logic for sync: prefers read chapters, then higher progress
+
 ## [1.11.5]
 
 ### Changes

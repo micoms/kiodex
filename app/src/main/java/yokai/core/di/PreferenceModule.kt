@@ -17,6 +17,7 @@ import yokai.domain.library.LibraryPreferences
 import yokai.domain.recents.RecentsPreferences
 import yokai.domain.source.SourcePreferences
 import yokai.domain.storage.StoragePreferences
+import yokai.domain.sync.SyncPreferences
 import yokai.domain.ui.UiPreferences
 import yokai.domain.ui.settings.ReaderPreferences
 
@@ -47,6 +48,8 @@ fun preferenceModule(application: Application) = module {
     single { SecurityPreferences(get()) }
 
     single { BackupPreferences(get()) }
+
+    single { SyncPreferences(get()) }
 
     single { LibraryPreferences(get()) }
 

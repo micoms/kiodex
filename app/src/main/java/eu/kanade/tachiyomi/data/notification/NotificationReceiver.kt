@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.data.download.DownloadJob
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.data.preference.PreferencesHelper
+import eu.kanade.tachiyomi.data.sync.SyncDataJob
 import eu.kanade.tachiyomi.data.updater.AppDownloadInstallJob
 import eu.kanade.tachiyomi.domain.manga.models.Manga
 import eu.kanade.tachiyomi.extension.ExtensionInstallerJob
@@ -78,6 +79,7 @@ class NotificationReceiver : BroadcastReceiver() {
             ACTION_CANCEL_UPDATE_DOWNLOAD -> cancelDownloadUpdate(context)
             ACTION_START_APP_UPDATE -> startAppUpdate(context, intent)
             ACTION_CANCEL_RESTORE -> cancelRestoreUpdate(context)
+            ACTION_CANCEL_SYNC -> cancelSync(context)
             // Share backup file
             ACTION_SHARE_BACKUP ->
                 shareBackup(
@@ -245,6 +247,11 @@ class NotificationReceiver : BroadcastReceiver() {
         dismissNotification(context, Notifications.ID_UPDATER)
     }
 
+    private fun cancelSync(context: Context) {
+        SyncDataJob.stop(context)
+        dismissNotification(context, Notifications.ID_SYNC_PROGRESS)
+    }
+
     private fun startAppUpdate(context: Context, intent: Intent) {
         val url = intent.getStringExtra(AppDownloadInstallJob.EXTRA_DOWNLOAD_URL) ?: return
         val notifyOnInstall =
@@ -280,6 +287,9 @@ class NotificationReceiver : BroadcastReceiver() {
 
         // Called to cancel restore
         private const val ACTION_CANCEL_RESTORE = "$ID.$NAME.CANCEL_RESTORE"
+
+        // Called to cancel sync
+        private const val ACTION_CANCEL_SYNC = "$ID.$NAME.CANCEL_SYNC"
 
         // Value containing file location.
         private const val EXTRA_FILE_LOCATION = "$ID.$NAME.FILE_LOCATION"
@@ -672,6 +682,21 @@ class NotificationReceiver : BroadcastReceiver() {
         internal fun cancelRestorePendingBroadcast(context: Context, notificationId: Int): PendingIntent {
             val intent = Intent(context, NotificationReceiver::class.java).apply {
                 action = ACTION_CANCEL_RESTORE
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+            }
+            return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        }
+
+        /**
+         * Returns [PendingIntent] that cancels a sync job.
+         *
+         * @param context context of application
+         * @param notificationId id of notification
+         * @return [PendingIntent]
+         */
+        internal fun cancelSyncPendingBroadcast(context: Context, notificationId: Int): PendingIntent {
+            val intent = Intent(context, NotificationReceiver::class.java).apply {
+                action = ACTION_CANCEL_SYNC
                 putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             }
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
