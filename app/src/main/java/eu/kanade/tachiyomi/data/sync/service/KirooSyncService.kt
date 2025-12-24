@@ -81,8 +81,8 @@ class KirooSyncService(
                 throw Exception("Failed to decode server response")
             }
         } else if (response.code == 404) {
-             // No data on server yet
-             return null
+            // No data on server yet
+            return null
         } else {
             val errorBody = response.body.string()
             throw Exception("Sync failed: ${response.code} - $errorBody")
@@ -99,7 +99,6 @@ class KirooSyncService(
         val headers = Headers.Builder()
             .add("X-API-Key", apiKey)
             .build()
-        
         // Serialize SyncData (which wraps Backup + DeviceID)
         val jsonString = json.encodeToString(SyncData.serializer(), syncData)
         val body = jsonString.toRequestBody("application/json".toMediaType())
@@ -107,7 +106,7 @@ class KirooSyncService(
         val request = POST(
             url = uploadUrl,
             headers = headers,
-            body = body
+            body = body,
         )
 
         val client = OkHttpClient.Builder()
