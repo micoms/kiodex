@@ -44,6 +44,7 @@ jobs:
           myToken: ${{ github.token }}
           exclude_types: "draft|prerelease"
           view_top: 1
+        continue-on-error: true
 
       - name: Curren commit
         id: current_commit
@@ -58,19 +59,27 @@ jobs:
       - name: Previous commit
         id: previous_commit
         run: |
-          commit_count_diff=$(git rev-list --count "${{ steps.last_release.outputs.tag_name }}"..HEAD)
+          if [ -z "${{ steps.last_release.outputs.tag_name }}" ]; then
+            echo "No previous release found. Defaulting to first commit."
+            first_commit=$(git rev-list --max-parents=0 HEAD)
+            echo "commit_count_diff=$(git rev-list --count HEAD)"
+            echo "PREV_RELEASE_SHA=$first_commit" >> $GITHUB_OUTPUT
+            echo "PREV_TAG_NAME=$first_commit" >> $GITHUB_OUTPUT
+          else
+            commit_count_diff=$(git rev-list --count "${{ steps.last_release.outputs.tag_name }}"..HEAD)
 
-          # Fake at least 1 commits (to avoid no changes)
-          if [ "${commit_count_diff}" -eq 0 ]; then
-            commit_count_diff=1
+            # Fake at least 1 commits (to avoid no changes)
+            if [ "${commit_count_diff}" -eq 0 ]; then
+                commit_count_diff=1
+            fi
+
+            echo "commit_count_diff=$commit_count_diff"
+            prev_release_sha=$(git rev-parse --short HEAD~$commit_count_diff)
+            echo "PREV_RELEASE_SHA=$prev_release_sha"
+            echo "PREV_RELEASE_SHA=$prev_release_sha" >> $GITHUB_OUTPUT
+            echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}"
+            echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
           fi
-
-          echo "commit_count_diff=$commit_count_diff"
-          prev_release_sha=$(git rev-parse --short HEAD~$commit_count_diff)
-          echo "PREV_RELEASE_SHA=$prev_release_sha"
-          echo "PREV_RELEASE_SHA=$prev_release_sha" >> $GITHUB_OUTPUT
-          echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}"
-          echo "PREV_TAG_NAME=${{ steps.last_release.outputs.tag_name }}" >> $GITHUB_OUTPUT
 
       - name: Commit logs
         id: commit_logs
