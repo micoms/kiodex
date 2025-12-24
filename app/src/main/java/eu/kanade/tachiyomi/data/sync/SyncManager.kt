@@ -12,6 +12,7 @@ import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.sync.service.GoogleDriveSyncService
+import eu.kanade.tachiyomi.data.sync.service.KirooSyncService
 import eu.kanade.tachiyomi.data.sync.service.SyncData
 import eu.kanade.tachiyomi.data.sync.service.SyncYomiSyncService
 import kotlinx.serialization.json.Json
@@ -55,6 +56,7 @@ class SyncManager(
         NONE(0),
         SYNCYOMI(1),
         GOOGLE_DRIVE(2),
+        KIROO(3),
         ;
 
         companion object {
@@ -135,6 +137,15 @@ class SyncManager(
 
             SyncService.GOOGLE_DRIVE -> {
                 GoogleDriveSyncService(context, json, syncPreferences)
+            }
+
+            SyncService.KIROO -> {
+                KirooSyncService(
+                    context,
+                    json,
+                    syncPreferences,
+                    notifier,
+                )
             }
 
             else -> {
