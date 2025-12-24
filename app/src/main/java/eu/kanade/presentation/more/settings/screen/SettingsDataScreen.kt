@@ -559,6 +559,7 @@ object SettingsDataScreen : SearchableSettings {
                             SyncManager.SyncService.NONE.value to stringResource(MR.strings.off),
                             SyncManager.SyncService.SYNCYOMI.value to stringResource(SYMR.strings.syncyomi),
                             SyncManager.SyncService.GOOGLE_DRIVE.value to stringResource(SYMR.strings.google_drive),
+                            SyncManager.SyncService.KIROO.value to "Kiroo Sync",
                         ),
                         title = stringResource(SYMR.strings.pref_sync_service),
                         onValueChanged = { true },
@@ -590,6 +591,7 @@ object SettingsDataScreen : SearchableSettings {
         val preferences = when (syncServiceType) {
             SyncManager.SyncService.NONE -> emptyList()
             SyncManager.SyncService.SYNCYOMI -> getSelfHostPreferences(syncPreferences)
+            SyncManager.SyncService.KIROO -> getKirooPreferences(syncPreferences)
             SyncManager.SyncService.GOOGLE_DRIVE -> getGoogleDrivePreferences()
         }
 
@@ -741,6 +743,68 @@ object SettingsDataScreen : SearchableSettings {
                 EditTextPreferenceWidget(
                     title = stringResource(SYMR.strings.pref_sync_api_key),
                     subtitle = stringResource(SYMR.strings.pref_sync_api_key_summ),
+                    onConfirm = {
+                        syncPreferences.clientAPIKey().set(it)
+                        true
+                    },
+                    icon = null,
+                    value = values,
+                    widget = {
+                        IconButton(
+                            onClick = { qrScanLauncher.launch(scanOptions) },
+                            modifier = Modifier.padding(start = TrailingWidgetBuffer),
+                        ) {
+                            Icon(
+                                Icons.Filled.QrCodeScanner,
+                                contentDescription = stringResource(SYMR.strings.scan_qr_code),
+                            )
+                        }
+                    },
+                )
+            },
+        )
+    }
+
+    @Composable
+    private fun getKirooPreferences(syncPreferences: SyncPreferences): List<Preference> {
+        val scope = rememberCoroutineScope()
+
+        val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) {
+            if (it.contents != null && it.contents.isNotEmpty()) {
+                syncPreferences.clientAPIKey().set(it.contents)
+            }
+        }
+        val context = LocalContext.current
+        val scanOptions = remember {
+            ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                setOrientationLocked(false)
+                setPrompt(SYMR.strings.scan_qr_code.getString(context))
+                addExtra(Intents.Scan.SCAN_TYPE, Intents.Scan.MIXED_SCAN)
+            }
+        }
+
+        return listOf(
+            Preference.PreferenceItem.EditTextPreference(
+                preference = syncPreferences.clientHost(),
+                title = "Kiroo Host",
+                subtitle = "The URL of your Kiroo Sync server",
+                onValueChanged = { newValue ->
+                    scope.launch {
+                        val trimmedValue = newValue.trim()
+                        val modifiedValue = trimmedValue.trimEnd { it == '/' }
+                        syncPreferences.clientHost().set(modifiedValue)
+                    }
+                    true
+                },
+            ),
+            Preference.PreferenceItem.CustomPreference(
+                title = "Kiroo API Key",
+            ) {
+                val values by syncPreferences.clientAPIKey().collectAsState()
+                EditTextPreferenceWidget(
+                    title = "Kiroo API Key",
+                    subtitle = "Your Kiroo Sync API Key",
                     onConfirm = {
                         syncPreferences.clientAPIKey().set(it)
                         true
