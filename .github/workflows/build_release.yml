@@ -2,9 +2,12 @@ name: Release Builder
 # Build a stable release on a tag v* newly pushed
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,12 +26,11 @@ jobs:
       COMMIT_LOGS: ${{ steps.commit_logs.outputs.COMMIT_LOGS }}
       PREV_TAG_NAME: ${{ steps.previous_commit.outputs.PREV_TAG_NAME }}
     steps:
-      - name: Get tag name (${{ github.ref }})
+      - name: Get tag name
         id: get_tag
         run: |
-          version_tag=$(echo ${GITHUB_REF/refs\/tags\//} | sed -r 's/^refs\/(heads|tags)\///' | sed -r 's/[-\/]+/_/g')
-          echo "VERSION_TAG=$version_tag"
-          echo "VERSION_TAG=$version_tag" >> $GITHUB_OUTPUT
+          echo "VERSION_TAG=${{ github.event.inputs.version }}"
+          echo "VERSION_TAG=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
 
       - name: Clone Repository (${{ steps.get_tag.outputs.VERSION_TAG }})
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -84,7 +86,7 @@ jobs:
     name: Build release app
     runs-on: 'ubuntu-24.04'
     needs: prepare-build
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: prepare-build
     steps:
       - name: Clone Repository (${{ needs.prepare-build.outputs.VERSION_TAG }})
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
