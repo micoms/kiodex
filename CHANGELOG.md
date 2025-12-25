@@ -11,6 +11,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Other` - for technical stuff.
 
 ## [Unreleased]
+
+## [v1.13.6] - 2025-12-25
+### Fixed
+- Fix Kiroo Sync timeout for large libraries by adding gzip compression and increasing timeouts from 30s to 300s
 ### Changed
 - LocalSource now reads ComicInfo.xml file for chapter (if available) to display chapter title, number and scanlator ([@raxod502](https://github.com/radian-software)) ([#2332](https://github.com/mihonapp/mihon/pull/2332))
 

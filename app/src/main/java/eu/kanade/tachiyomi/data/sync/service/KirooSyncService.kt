@@ -14,7 +14,10 @@ import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.TimeUnit
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 
 class KirooSyncService(
     context: Context,
@@ -56,6 +59,7 @@ class KirooSyncService(
 
         val headers = Headers.Builder()
             .add("X-API-Key", apiKey)
+            .add("Accept-Encoding", "gzip") // Request gzip response
             .build()
 
         val request = GET(
@@ -64,14 +68,20 @@ class KirooSyncService(
         )
 
         val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(300, TimeUnit.SECONDS) // 5 minutes for large libraries
+            .readTimeout(300, TimeUnit.SECONDS)
             .build()
 
         val response = client.newCall(request).await()
 
         if (response.isSuccessful) {
-            val bodyString = response.body.string()
+            val contentEncoding = response.header("Content-Encoding")
+            val bodyString = if (contentEncoding == "gzip") {
+                // Decompress gzip response
+                GZIPInputStream(response.body.byteStream()).bufferedReader().use { it.readText() }
+            } else {
+                response.body.string()
+            }
             return try {
                 // Server returns the Backup object directly
                 val backup = json.decodeFromString(Backup.serializer(), bodyString)
@@ -96,12 +106,22 @@ class KirooSyncService(
 
         if (host.isBlank()) return
 
-        val headers = Headers.Builder()
-            .add("X-API-Key", apiKey)
-            .build()
         // Serialize SyncData (which wraps Backup + DeviceID)
         val jsonString = json.encodeToString(SyncData.serializer(), syncData)
-        val body = jsonString.toRequestBody("application/json".toMediaType())
+        
+        // Gzip compress the data for faster transfer
+        val bos = ByteArrayOutputStream()
+        GZIPOutputStream(bos).use { gzip ->
+            gzip.write(jsonString.toByteArray(Charsets.UTF_8))
+        }
+        val compressedData = bos.toByteArray()
+
+        val headers = Headers.Builder()
+            .add("X-API-Key", apiKey)
+            .add("Content-Encoding", "gzip")
+            .build()
+
+        val body = compressedData.toRequestBody("application/json".toMediaType())
 
         val request = POST(
             url = uploadUrl,
@@ -123,3 +143,4 @@ class KirooSyncService(
         }
     }
 }
+
